@@ -124,4 +124,16 @@
   .print-only {
     display: block !important;
   }
+  .print-target {
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  h2, h3, li {
+    break-inside: avoid;
+  }
+  section, .mb-\\[8px\\] {
+    break-inside: avoid;
+  }
 }
