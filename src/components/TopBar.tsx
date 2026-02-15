@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { FileText, Eye, Award } from "lucide-react";
+import { FileText, Eye, Award, Moon, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface TopBarProps {
   stepNum?: number;
@@ -15,6 +16,19 @@ const navLinks = [
 
 const TopBar = ({ stepNum, status = "In Progress" }: TopBarProps) => {
   const { pathname } = useLocation();
+  const [dark, setDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("theme-mode");
+      if (saved) return saved === "dark";
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme-mode", dark ? "dark" : "light");
+  }, [dark]);
 
   return (
     <header className="no-print sticky top-0 z-50 flex h-[64px] items-center justify-between border-b border-border bg-card/80 px-[24px] backdrop-blur-sm">
@@ -54,16 +68,25 @@ const TopBar = ({ stepNum, status = "In Progress" }: TopBarProps) => {
         })}
       </nav>
 
-      <span
-        className={cn(
-          "rounded-full px-[12px] py-[4px] text-xs font-semibold tracking-wide",
-          status === "Shipped"
-            ? "bg-primary text-primary-foreground"
-            : "border border-border bg-secondary text-muted-foreground"
-        )}
-      >
-        {status}
-      </span>
+      <div className="flex items-center gap-[12px]">
+        <button
+          onClick={() => setDark((d) => !d)}
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          aria-label="Toggle dark mode"
+        >
+          {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+        <span
+          className={cn(
+            "rounded-full px-[12px] py-[4px] text-xs font-semibold tracking-wide",
+            status === "Shipped"
+              ? "bg-primary text-primary-foreground"
+              : "border border-border bg-secondary text-muted-foreground"
+          )}
+        >
+          {status}
+        </span>
+      </div>
     </header>
   );
 };
