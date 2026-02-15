@@ -1,71 +1,149 @@
 
 
-# AI Resume Builder — Implementation Plan
+# Phases 4-10 Implementation Plan
 
-## Overview
-A premium, portfolio-grade SaaS resume builder with deterministic ATS scoring, template switching, gated build-track system, and proof validation. All data persisted in localStorage — no backend required.
+## What's Already Built (Phases 1-3)
+- Design system (off-white, deep red accent, serif/sans-serif fonts, spacing scale)
+- Routing with gated build track (`/rb/01` through `/rb/08` + `/rb/proof`)
+- Home page with CTA
+- Types, storage utilities, TopBar component
+
+## What We're Building Now
 
 ---
 
-## Phase 1: Design System & Layout Foundation
-- Set up the premium design system: off-white background (#F7F6F3), deep red accent (#8B0000), serif headings, sans-serif body, strict 8/16/24/40/64px spacing scale, max 4 colors
-- Create the base layout components: top bar, main workspace, and reusable page shells
-- Flat design only — no gradients, glassmorphism, or neon
+### Phase 4: Resume Builder (`/builder`)
 
-## Phase 2: Routing & Build Track Gating
-- Set up all required routes: `/`, `/builder`, `/preview`, `/proof`, and `/rb/01-problem` through `/rb/08-ship` plus `/rb/proof`
-- Build the gated step system: sequential progression only, no skipping, redirect to current unlocked step on direct URL access
-- Each `/rb` step page has: top bar with step indicator, 70/30 layout (workspace + build panel), artifact upload gating, and next button logic
-- Artifacts stored as `rb_step_X_artifact` in localStorage
+**New files:**
+- `src/components/builder/PersonalInfoSection.tsx` -- Name, email, phone, location, LinkedIn, GitHub fields
+- `src/components/builder/SummarySection.tsx` -- Textarea with character guidance
+- `src/components/builder/EducationSection.tsx` -- Add/remove multiple entries (institution, degree, field, dates)
+- `src/components/builder/ExperienceSection.tsx` -- Add/remove entries with dynamic bullet arrays + bullet discipline hints
+- `src/components/builder/ProjectsSection.tsx` -- Add/remove entries with description counter (200 char max), tag input for tech stack, optional URLs + bullet guidance
+- `src/components/builder/SkillsSection.tsx` -- 3 categories (technical, soft, tools) with chip input, duplicate prevention, counts, and "Suggest Skills" button with simulated 1s loading
+- `src/components/builder/ResumePreview.tsx` -- Live preview panel rendering resume data, hiding empty sections
+- `src/components/builder/ChipInput.tsx` -- Reusable tag/chip input (Enter to add, X to remove)
 
-## Phase 3: Home Page
-- Clean minimal landing page with headline "Build a Resume That Gets Read."
-- Single CTA button → `/builder`
+**Modified files:**
+- `src/pages/Builder.tsx` -- Two-column layout: left = accordion form sections, right = live preview. Uses `useState` initialized from `getResumeData()`, auto-saves to localStorage on every change via `useEffect`.
 
-## Phase 4: Resume Builder (`/builder`)
-- Two-column layout: form on left, live preview on right
-- Accordion sections for: Personal Info, Summary, Education (multiple), Experience (multiple with bullet arrays), Projects (with description counter, tag input for tech stack, URLs), Skills (3 categories with chip input, duplicate prevention, counts, and "Suggest Skills" button)
-- Auto-save all changes to `resumeBuilderData` in localStorage
-- Safe parsing with fallback to empty defaults on corruption
-- Live preview updates as user types, hiding empty sections
+---
 
-## Phase 5: ATS Scoring System
-- Deterministic scoring (0–100) based on defined rules (name, email, summary length, experience, education, skills count, projects, phone, LinkedIn, GitHub, action verbs in summary)
-- Circular progress indicator on `/preview` with color states: Red (0–40), Amber (41–70), Green (71–100)
-- Live score updates
-- Up to 5 improvement suggestions displayed below score
+### Phase 5: ATS Scoring System
 
-## Phase 6: Bullet Discipline Guidance
-- Inline advisory suggestions in Experience and Projects sections
-- Detect missing action verbs and missing measurable impact
-- Non-blocking — advisory only
+**New files:**
+- `src/lib/scoring.ts` -- Pure function `calculateScore(data: ResumeData): { score: number; suggestions: string[] }` implementing the deterministic rules (+10 name, +10 email, +10 summary>50chars, +15 experience with bullets, +10 education, +10 five skills, +10 project, +5 phone, +5 LinkedIn, +5 GitHub, +10 action verbs in summary). Capped at 100. Returns up to 5 suggestions.
+- `src/components/preview/ScoreCircle.tsx` -- Circular SVG progress indicator with color states (red 0-40, amber 41-70, green 71-100)
+- `src/components/preview/SuggestionsList.tsx` -- Renders improvement suggestions
 
-## Phase 7: Template System
-- 3 templates: Classic (single column, serif, horizontal rules), Modern (two-column, sidebar), Minimal (single column, no borders, generous whitespace)
-- Template switching changes layout only — never changes data or score
-- Persist selected template in `resumeTemplate`
+**Modified files:**
+- `src/pages/Preview.tsx` -- Full preview page with template-rendered resume, score circle, suggestions, and export controls
 
-## Phase 8: Color Theme Picker
-- 5 accent themes: Teal, Navy, Burgundy, Forest, Charcoal
-- Applied via CSS variable
-- Persist in `resumeTheme`
+---
 
-## Phase 9: Export System (`/preview`)
-- "Print / Save as PDF" using browser print with clean styling rules (white background, hidden UI, no cut-offs, no colored backgrounds)
-- "Copy Resume as Text" — structured plain text copied to clipboard
-- Pre-export validation warning if missing name or no projects/experience (non-blocking)
+### Phase 6: Bullet Discipline Guidance
 
-## Phase 10: Proof System & Shipped Status
-- `/rb/proof` page with 8-step completion overview, inputs for Lovable/GitHub/Deploy links with URL validation
-- "Copy Final Submission" button with formatted output
-- Shipped status badge logic: all 8 steps complete + all tests passed + all 3 proof links valid
-- Calm "Project 3 Shipped Successfully." message — no confetti or animations
+Built directly into `ExperienceSection.tsx` and `ProjectsSection.tsx` (Phase 4). Each bullet input checks:
+- Does it start with an action verb? If not, show subtle hint: "Start with a strong action verb."
+- Does it contain a number, %, "k", or "X"? If not, suggest: "Add measurable impact."
 
-## Architecture Principles
-- Central state object in localStorage, separate from presentation
-- Templates consume the same state
-- Score computed from state only — no duplication
-- Graceful handling of corrupted localStorage
-- Mobile responsive throughout
-- Zero console errors
+These are inline, non-blocking advisory messages rendered below each bullet input.
+
+---
+
+### Phase 7: Template System
+
+**New files:**
+- `src/components/templates/ClassicTemplate.tsx` -- Single column, serif headers, horizontal rules
+- `src/components/templates/ModernTemplate.tsx` -- Two-column with left sidebar (contact + skills), accent-colored sidebar
+- `src/components/templates/MinimalTemplate.tsx` -- Single column, no borders, generous whitespace
+- `src/components/templates/TemplateRenderer.tsx` -- Takes `ResumeData` + `TemplateName` and renders the correct template
+
+**Modified files:**
+- `src/pages/Preview.tsx` -- Add template switcher (3 buttons/tabs)
+- `src/components/builder/ResumePreview.tsx` -- Use TemplateRenderer for builder live preview
+
+---
+
+### Phase 8: Color Theme Picker
+
+**Modified files:**
+- `src/pages/Preview.tsx` -- Add theme picker (5 color swatches). On select, set `data-theme` attribute on the resume container and persist via `saveTheme()`.
+
+The CSS variables for themes are already defined in `index.css` (lines 110-114). Templates will use `hsl(var(--resume-accent))` for accent colors.
+
+---
+
+### Phase 9: Export System
+
+**Modified files:**
+- `src/pages/Preview.tsx` -- Add two buttons:
+  1. "Print / Save as PDF" -- calls `window.print()`. Print CSS already exists in `index.css`; will add more specific rules to hide UI and style the resume cleanly.
+  2. "Copy Resume as Text" -- generates structured plain text and copies to clipboard.
+  
+- Add pre-export validation: if missing name or no projects/experience, show a non-blocking warning toast.
+- `src/index.css` -- Extended `@media print` rules for clean resume output (no colored backgrounds, no cut-offs, avoid page breaks inside sections).
+
+---
+
+### Phase 10: Proof System & Shipped Status
+
+**Modified files:**
+- `src/pages/Proof.tsx` -- Full proof page (currently placeholder) mirroring `/rb/proof` but for the main app flow. Shows completion checklist, proof links, and shipped status.
+
+The `/rb/proof` page (`BuildProof.tsx`) is already fully built. The `/proof` route will share similar logic.
+
+---
+
+## Technical Details
+
+### State Flow
+All components read from and write to a single `ResumeData` object in the Builder page state. The Builder page initializes from `getResumeData()` and auto-saves on changes. Preview and Proof pages also read from `getResumeData()` on mount.
+
+### File Count Summary
+- **New files:** ~12 component files + 1 utility
+- **Modified files:** ~4 pages + index.css
+
+### Component Tree (Builder Page)
+```text
+Builder
++-- TopBar
++-- Left Column (Accordion)
+|   +-- PersonalInfoSection
+|   +-- SummarySection
+|   +-- EducationSection (with bullet guidance)
+|   +-- ExperienceSection (with bullet guidance)
+|   +-- ProjectsSection (with bullet guidance)
+|   +-- SkillsSection (with ChipInput)
++-- Right Column
+    +-- TemplateRenderer
+        +-- ClassicTemplate | ModernTemplate | MinimalTemplate
+```
+
+### Component Tree (Preview Page)
+```text
+Preview
++-- TopBar
++-- Controls (template switcher, theme picker, export buttons)
++-- ScoreCircle
++-- SuggestionsList
++-- TemplateRenderer (print target)
+```
+
+### Scoring Function (Pure)
+```text
+calculateScore(data) -> { score: number, suggestions: string[] }
+  +10 if name present
+  +10 if email present
+  +10 if summary > 50 chars
+  +15 if >= 1 experience with >= 1 bullet
+  +10 if >= 1 education
+  +10 if >= 5 total skills
+  +10 if >= 1 project
+  +5 if phone present
+  +5 if LinkedIn present
+  +5 if GitHub present
+  +10 if summary contains action verbs
+  Cap at 100
+```
 
